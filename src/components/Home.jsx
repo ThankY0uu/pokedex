@@ -1,29 +1,32 @@
 import { useState, useEffect } from 'react';
+import './Home.css';
 
-const GENERATIES = [
+const GENERATIONS = [
     { label: 'Gen 1', offset: 0, limit: 151 },
     { label: 'Gen 2', offset: 151, limit: 100 },
     { label: 'Gen 3', offset: 251, limit: 135 },
 ];
 
-function Home({ onSelect }) {
+function Home({ onSelect, favorieten, toggleFavoriet }) {
     const [pokemonList, setPokemonList] = useState([]);
-    const [generatie, setGeneratie] = useState(0);
-    const [zoekterm, setZoekterm] = useState('');
-    const [typeFilter, setTypeFilter] = useState('alles');
+    const [generation, setGeneration] = useState(0);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [typeFilter, setTypeFilter] = useState('all');
     const [types, setTypes] = useState([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        const haalOp = async () => {
+        const fetchData = async () => {
             setLoading(true);
 
-            const { offset, limit } = GENERATIES[generatie];
+            const { offset, limit } = GENERATIONS[generation];
 
+            // Step 1: fetch the list
             const res = await fetch(`https://pokeapi.co/api/v2/pokemon?offset=${offset}&limit=${limit}`);
             const data = await res.json();
 
-            const metTypes = await Promise.all(
+            // Step 2: fetch the type for each pokemon
+            const withTypes = await Promise.all(
                 data.results.map(async (p, i) => {
                     const detail = await fetch(p.url).then(r => r.json());
                     return {
@@ -34,74 +37,92 @@ function Home({ onSelect }) {
                 })
             );
 
-            setPokemonList(metTypes);
+            setPokemonList(withTypes);
 
-            const alleTypes = [...new Set(metTypes.flatMap(p => p.types))].sort();
-            setTypes(alleTypes);
-            setTypeFilter('alles');
+            // Step 3: collect all unique types for the dropdown
+            const allTypes = [...new Set(withTypes.flatMap(p => p.types))].sort();
+            setTypes(allTypes);
+            setTypeFilter('all');
             setLoading(false);
         };
 
-        haalOp();
-    }, [generatie]);
+        fetchData();
+    }, [generation]);
 
-    const gefilterd = pokemonList.filter(pokemon => {
-        const zoekMatch = pokemon.name.toLowerCase().includes(zoekterm.toLowerCase());
+    // Filter the list by search term and type
+    const filtered = pokemonList.filter(pokemon => {
+        const searchMatch = pokemon.name.toLowerCase().includes(searchTerm.toLowerCase());
 
-        if (typeFilter === 'alles') {
-            return zoekMatch;
+        if (typeFilter === 'favorites') {
+            return searchMatch && favorieten.includes(pokemon.name);
         }
 
-        return zoekMatch && pokemon.types.includes(typeFilter);
+        if (typeFilter === 'all') {
+            return searchMatch;
+        }
+
+        return searchMatch && pokemon.types.includes(typeFilter);
     });
 
     return (
         <div className="home-container">
-            <h1>DE ULTIEME Pokédex</h1>
+            <h1>THE ULTIMATE Pokédex</h1>
 
-            <div style={{ marginBottom: '10px' }}>
-                {GENERATIES.map((gen, i) => (
+            {/* Generation buttons */}
+            <div className="generation-buttons">
+                {GENERATIONS.map((gen, i) => (
                     <button
                         key={gen.label}
-                        onClick={() => setGeneratie(i)}
-                        style={{ marginRight: '8px', fontWeight: generatie === i ? 'bold' : 'normal' }}
+                        onClick={() => setGeneration(i)}
+                        style={{ fontWeight: generation === i ? 'bold' : 'normal' }}
                     >
                         {gen.label}
                     </button>
                 ))}
             </div>
 
-            <div style={{ marginBottom: '16px', display: 'flex', gap: '10px' }}>
+            {/* Search bar and filter dropdown */}
+            <div className="search-bar">
                 <input
                     type="text"
-                    placeholder="Zoek een Pokémon..."
-                    value={zoekterm}
-                    onChange={e => setZoekterm(e.target.value)}
+                    placeholder="Search a Pokémon..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
                 />
                 <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
-                    <option value="alles">Alle types</option>
+                    <option value="all">All types</option>
+                    <option value="favorites">❤️ Favorites</option>
                     {types.map(type => (
                         <option key={type} value={type}>{type}</option>
                     ))}
                 </select>
             </div>
 
-            {loading && <p>Pokémon worden geladen...</p>}
+            {loading && <p>Loading Pokémon...</p>}
 
-            <div className="pokemon-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px' }}>
-                {gefilterd.map(pokemon => {
-                    const plaatje = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`;
+            {/* Pokemon grid */}
+            <div className="pokemon-grid">
+                {filtered.map(pokemon => {
+                    const image = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`;
+                    const isFavorite = favorieten.includes(pokemon.name);
 
                     return (
                         <div
                             key={pokemon.name}
                             className="pokemon-card"
                             onClick={() => onSelect(pokemon.name)}
-                            style={{ border: '1px solid #ccc', padding: '10px', cursor: 'pointer', textAlign: 'center' }}
                         >
-                            <img src={plaatje} alt={pokemon.name} />
-                            <p style={{ textTransform: 'capitalize' }}>{pokemon.name}</p>
-                            <p style={{ fontSize: '12px', color: '#888' }}>{pokemon.types.join(', ')}</p>
+                            {/* Favorite button */}
+                            <button
+                                className="favorite-btn"
+                                onClick={e => { e.stopPropagation(); toggleFavoriet(pokemon.name); }}
+                            >
+                                {isFavorite ? '❤️' : '🤍'}
+                            </button>
+
+                            <img src={image} alt={pokemon.name} />
+                            <p>{pokemon.name}</p>
+                            <p className="pokemon-type">{pokemon.types.join(', ')}</p>
                         </div>
                     );
                 })}
