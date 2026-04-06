@@ -1,0 +1,28 @@
+.diagram-container {
+    text-align: center;
+    padding: 20px;
+}
+
+.diagram-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.diagram-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.diagram-legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+}
+
+.diagram-legend-label {
+    text-transform: capitalize;
+}
