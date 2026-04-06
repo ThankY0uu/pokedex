@@ -22,13 +22,24 @@ const TYPE_COLORS = {
     steel: '#B8B8D0',
 };
 
+const GENERATIONS = [
+    { label: 'Gen 1', offset: 0, limit: 151 },
+    { label: 'Gen 2', offset: 151, limit: 100 },
+    { label: 'Gen 3', offset: 251, limit: 135 },
+];
+
 function Diagram() {
     const [typeCounts, setTypeCounts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [generation, setGeneration] = useState(0);
 
     useEffect(() => {
         const fetchData = async () => {
-            const res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=151');
+            setLoading(true);
+
+            const { offset, limit } = GENERATIONS[generation];
+
+            const res = await fetch(`https://pokeapi.co/api/v2/pokemon?offset=${offset}&limit=${limit}`);
             const data = await res.json();
 
             const allTypes = await Promise.all(
@@ -56,7 +67,7 @@ function Diagram() {
         };
 
         fetchData();
-    }, []);
+    }, [generation]);
 
     if (loading) return <p>Loading diagram...</p>;
 
@@ -86,7 +97,20 @@ function Diagram() {
 
     return (
         <div className="diagram-container">
-            <h1>Type Distribution - Gen 1</h1>
+            <h1>Type Distribution - {GENERATIONS[generation].label}</h1>
+
+            {/* Generation buttons */}
+            <div className="diagram-generations">
+                {GENERATIONS.map((gen, i) => (
+                    <button
+                        key={gen.label}
+                        onClick={() => setGeneration(i)}
+                        style={{ fontWeight: generation === i ? 'bold' : 'normal' }}
+                    >
+                        {gen.label}
+                    </button>
+                ))}
+            </div>
 
             <svg width="400" height="400" viewBox="0 0 400 400">
                 {segments.map(seg => (
